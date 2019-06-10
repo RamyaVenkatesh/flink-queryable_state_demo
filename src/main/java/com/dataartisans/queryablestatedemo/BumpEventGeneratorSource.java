@@ -20,6 +20,8 @@ package com.dataartisans.queryablestatedemo;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
 
@@ -54,10 +56,11 @@ class BumpEventGeneratorSource extends RichSourceFunction<BumpEvent> {
   public void run(SourceContext<BumpEvent> sourceContext) throws Exception {
     final Random rand = new Random();
     final AtomicLong count = new AtomicLong();
+    final AtomicReference<String> itemId = new AtomicReference<>();
 
     Thread throughputLogger = null;
     if (printThroughput) {
-      throughputLogger = new Thread(new ThroughputLogger(count), "ThroughputLogger");
+      throughputLogger = new Thread(new ThroughputLogger(itemId, count), "ThroughputLogger");
       throughputLogger.start();
     }
 
@@ -66,11 +69,11 @@ class BumpEventGeneratorSource extends RichSourceFunction<BumpEvent> {
         // Generate random events
         final int userId = rand.nextInt(Integer.MAX_VALUE);
 
-        final String itemCase = RandomStringUtils
-            .randomAlphanumeric(ITEM_ID_NUM_CHARS).toLowerCase();
+        itemId.set(RandomStringUtils
+                .randomAlphanumeric(ITEM_ID_NUM_CHARS).toLowerCase());
 
         synchronized (sourceContext.getCheckpointLock()) {
-          sourceContext.collect(new BumpEvent(userId, itemCase));
+          sourceContext.collect(new BumpEvent(userId, itemId.toString()));
         }
 
         // Increment count for throughput logger
@@ -96,8 +99,10 @@ class BumpEventGeneratorSource extends RichSourceFunction<BumpEvent> {
   private static class ThroughputLogger implements Runnable {
 
     private final AtomicLong count;
+    private final AtomicReference<String> itemCase;
 
-    ThroughputLogger(AtomicLong count) {
+    ThroughputLogger(AtomicReference<String> itemCase, AtomicLong count) {
+      this.itemCase = itemCase;
       this.count = count;
     }
 
@@ -123,6 +128,7 @@ class BumpEventGeneratorSource extends RichSourceFunction<BumpEvent> {
         lastTimestamp = ts;
         lastCount = currCount;
 
+        System.out.println("Item ID: " + this.itemCase.toString());
         System.out.println(String.format("Generating %d elements per second", perSec));
       }
     }
