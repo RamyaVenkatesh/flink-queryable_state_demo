@@ -37,7 +37,7 @@ public class EventCountClient {
 
     // Configuration
     final String jobManagerHost = args.length > 1 ? args[1] : "localhost";
-    final int jobManagerPort = args.length > 1 ? Integer.parseInt(args[1]) : 6124;
+    final int jobManagerPort = args.length > 1 ? Integer.parseInt(args[2]) : 6124;
 
     System.out.println("Using JobManager " + jobManagerHost + ":" + jobManagerPort);
 
